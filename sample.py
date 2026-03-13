@@ -54,7 +54,7 @@ if __name__ == '__main__':
         parser = ArgumentParser()
         parser.add_argument("command",
                             choices=['devices', 'details', 'info', 'eeros',
-                                     'reboot','dump'],
+                                     'reboot','dump','topology'],
                             help="info to print")
         parser.add_argument("--eero", type=int, help="eero to reboot")
         args = parser.parse_args()
@@ -74,23 +74,94 @@ if __name__ == '__main__':
             if args.command == 'reboot':
                 reboot = eero.reboot(args.eero)
                 print_json(reboot)
-            if args.command == "dump":
+            if args.command == 'dump':
+                import datetime
+
                 network_details = eero.networks(network['url'])
                 devices = eero.devices(network['url'])
                 eeros = eero.eeros(network['url'])
 
+                network_dump = {
+                    'info': network,
+                    'details': network_details,
+                    'devices': devices,
+                    'eeros': eeros
+                }
+
                 network_id = eero.id_from_url(network['url'])
+                timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
-                with open('network_{}_info.json'.format(network_id), 'w') as output_file:
-                    json.dump(network, output_file, indent=2)
+                filename = 'network_{}_dump_{}.json'.format(network_id, timestamp)
 
-                with open('network_{}_details.json'.format(network_id), 'w') as output_file:
-                    json.dump(network_details, output_file, indent=2)
+                with open(filename, 'w') as output_file:
+                    json.dump(network_dump, output_file, indent=2)
 
-                with open('network_{}_devices.json'.format(network_id), 'w') as output_file:
-                    json.dump(devices, output_file, indent=2)
+                print('Wrote dump file {}'.format(filename))          
+            if args.command == 'topology':
+                devices = eero.devices(network['url'])
 
-                with open('network_{}_eeros.json'.format(network_id), 'w') as output_file:
-                    json.dump(eeros, output_file, indent=2)
+                nodes = {}
 
-                print('Wrote dump files for network {}'.format(network_id))
+                for device in devices:
+                    source = device.get('source', {})
+                    node = source.get('display_name', 'Unknown node')
+
+                    if node not in nodes:
+                        nodes[node] = []
+
+                    name = device.get('nickname') or device.get('hostname') or 'Unknown device'
+
+                    connected = device.get('connected', False)
+                    if connected:
+                        status = 'connected'
+                    else:
+                        status = 'offline'
+
+                    connection_type = device.get('connection_type', 'unknown')
+
+                    if connection_type == 'wired':
+                        overlay = '[{}] (wired)'.format(status)
+                    else:
+                        connectivity = device.get('connectivity', {})
+                        interface = device.get('interface', {})
+
+                        signal = connectivity.get('signal')
+                        score_bars = connectivity.get('score_bars')
+                        rx_bitrate = connectivity.get('rx_bitrate')
+                        frequency = interface.get('frequency')
+                        frequency_unit = interface.get('frequency_unit')
+
+                        wifi_details = []
+
+                        if frequency is not None and frequency_unit:
+                            wifi_details.append('{} {}'.format(frequency, frequency_unit))
+
+                        if signal is not None:
+                            wifi_details.append('signal {}'.format(signal))
+
+                        if score_bars is not None:
+                            wifi_details.append('{} bars'.format(score_bars))
+
+                        if rx_bitrate is not None:
+                            wifi_details.append('rx {}'.format(rx_bitrate))
+
+                        if wifi_details:
+                            overlay = '[{}] (WiFi, {})'.format(status, ', '.join(wifi_details))
+                        else:
+                            overlay = '[{}] (WiFi)'.format(status)
+
+                    nodes[node].append((name, overlay))
+
+                for node in sorted(nodes.keys()):
+                    print(node)
+
+                    devices_for_node = sorted(nodes[node], key=lambda x: x[0].lower())
+
+                    for i, (name, overlay) in enumerate(devices_for_node):
+                        branch = '+-'
+                        if i == len(devices_for_node) - 1:
+                            branch = '`-'
+
+                        print('  {} {} {}'.format(branch, name, overlay))
+
+                    print()
