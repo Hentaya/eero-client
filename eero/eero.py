@@ -84,3 +84,61 @@ class Eero(object):
                                         'eeros/{}/reboot'.format(
                                             self.id_from_url(device_id)),
                                         cookies=self._cookie_dict))
+    
+    def network_resource(self, network_id, resource_name):
+        allowed_resources = {
+            'reservations',
+            'profiles',
+            'settings',
+            'guestnetwork',
+            'speedtest',
+            'updates',
+            'diagnostics',
+            'insights',
+            'thread',
+            'forwards',
+            'routing'
+        }
+
+        if resource_name not in allowed_resources:
+            raise ValueError('unsupported resource: {}'.format(resource_name))
+
+        network = self.networks(network_id)
+        resource_url = network['resources'][resource_name]
+
+        return self.refreshed(lambda: self.client.get_url(
+                                        resource_url,
+                                        cookies=self._cookie_dict))
+
+    def reservations(self, network_id):
+        return self.network_resource(network_id, 'reservations')
+
+    def profiles(self, network_id):
+        return self.network_resource(network_id, 'profiles')
+
+    def settings(self, network_id):
+        return self.network_resource(network_id, 'settings')
+
+    def guestnetwork(self, network_id):
+        return self.network_resource(network_id, 'guestnetwork')
+
+    def speedtest(self, network_id):
+        return self.network_resource(network_id, 'speedtest')
+
+    def updates(self, network_id):
+        return self.network_resource(network_id, 'updates')
+
+    def diagnostics(self, network_id):
+        return self.network_resource(network_id, 'diagnostics')
+
+    def insights(self, network_id):
+        return self.network_resource(network_id, 'insights')
+
+    def thread(self, network_id):
+        return self.network_resource(network_id, 'thread')
+
+    def forwards(self, network_id):
+        return self.network_resource(network_id, 'forwards')
+
+    def routing(self, network_id):
+        return self.network_resource(network_id, 'routing')

@@ -54,7 +54,8 @@ if __name__ == '__main__':
         parser = ArgumentParser()
         parser.add_argument("command",
                             choices=['devices', 'details', 'info', 'eeros',
-                                     'reboot','dump','topology'],
+                                     'reboot','dump','topology','prebridge',
+                                     'reservations'],
                             help="info to print")
         parser.add_argument("--eero", type=int, help="eero to reboot")
         args = parser.parse_args()
@@ -165,3 +166,87 @@ if __name__ == '__main__':
                         print('  {} {} {}'.format(branch, name, overlay))
 
                     print()
+            if args.command == 'reservations':
+                reservations = eero.reservations(network['url'])
+                print_json(reservations)
+            if args.command == 'prebridge':
+                import datetime
+
+                network_details = eero.networks(network['url'])
+                devices = eero.devices(network['url'])
+                eeros = eero.eeros(network['url'])
+
+                network_backup = {
+                    'info': network,
+                    'details': network_details,
+                    'devices': devices,
+                    'eeros': eeros
+                }
+
+                try:
+                    network_backup['reservations'] = eero.reservations(network['url'])
+                except Exception as exception:
+                    network_backup['reservations_error'] = str(exception)
+
+                try:
+                    network_backup['profiles'] = eero.profiles(network['url'])
+                except Exception as exception:
+                    network_backup['profiles_error'] = str(exception)
+
+                try:
+                    network_backup['settings'] = eero.settings(network['url'])
+                except Exception as exception:
+                    network_backup['settings_error'] = str(exception)
+
+                try:
+                    network_backup['guestnetwork'] = eero.guestnetwork(network['url'])
+                except Exception as exception:
+                    network_backup['guestnetwork_error'] = str(exception)
+
+                try:
+                    network_backup['speedtest'] = eero.speedtest(network['url'])
+                except Exception as exception:
+                    network_backup['speedtest_error'] = str(exception)
+
+                try:
+                    network_backup['updates'] = eero.updates(network['url'])
+                except Exception as exception:
+                    network_backup['updates_error'] = str(exception)
+
+                try:
+                    network_backup['diagnostics'] = eero.diagnostics(network['url'])
+                except Exception as exception:
+                    network_backup['diagnostics_error'] = str(exception)
+
+                try:
+                    network_backup['insights'] = eero.insights(network['url'])
+                except Exception as exception:
+                    network_backup['insights_error'] = str(exception)
+
+                try:
+                    network_backup['thread'] = eero.thread(network['url'])
+                except Exception as exception:
+                    network_backup['thread_error'] = str(exception)
+
+                try:
+                    network_backup['forwards'] = eero.forwards(network['url'])
+                except Exception as exception:
+                    network_backup['forwards_error'] = str(exception)
+
+                try:
+                    network_backup['routing'] = eero.routing(network['url'])
+                except Exception as exception:
+                    network_backup['routing_error'] = str(exception)
+
+                network_id = eero.id_from_url(network['url'])
+                timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+                filename = 'network_{}_prebridge_{}.json'.format(
+                    network_id,
+                    timestamp
+                )
+
+                with open(filename, 'w') as output_file:
+                    json.dump(network_backup, output_file, indent=2)
+
+                print('Wrote pre-bridge backup file {}'.format(filename))
