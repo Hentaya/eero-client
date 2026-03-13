@@ -54,7 +54,7 @@ if __name__ == '__main__':
         parser = ArgumentParser()
         parser.add_argument("command",
                             choices=['devices', 'details', 'info', 'eeros',
-                                     'reboot'],
+                                     'reboot','dump'],
                             help="info to print")
         parser.add_argument("--eero", type=int, help="eero to reboot")
         args = parser.parse_args()
@@ -74,3 +74,23 @@ if __name__ == '__main__':
             if args.command == 'reboot':
                 reboot = eero.reboot(args.eero)
                 print_json(reboot)
+            if args.command == "dump":
+                network_details = eero.networks(network['url'])
+                devices = eero.devices(network['url'])
+                eeros = eero.eeros(network['url'])
+
+                network_id = eero.id_from_url(network['url'])
+
+                with open('network_{}_info.json'.format(network_id), 'w') as output_file:
+                    json.dump(network, output_file, indent=2)
+
+                with open('network_{}_details.json'.format(network_id), 'w') as output_file:
+                    json.dump(network_details, output_file, indent=2)
+
+                with open('network_{}_devices.json'.format(network_id), 'w') as output_file:
+                    json.dump(devices, output_file, indent=2)
+
+                with open('network_{}_eeros.json'.format(network_id), 'w') as output_file:
+                    json.dump(eeros, output_file, indent=2)
+
+                print('Wrote dump files for network {}'.format(network_id))
